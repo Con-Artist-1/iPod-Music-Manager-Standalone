@@ -81,7 +81,7 @@ class ToolTip:
         tw.wm_geometry(f"+{x}+{y}")
         label = tk.Label(tw, text=self.text, justify=tk.LEFT,
                          bg="#1c2128", fg="#c9d1d9", relief="solid", borderwidth=1,
-                         font=("Segoe UI", 9), padx=8, pady=4)
+                         font=("Segoe UI Variable Display", 11), padx=8, pady=4)
         label.pack()
 
     def _hide(self):
@@ -335,14 +335,16 @@ def get_disk_usage(path):
 
 def format_size(bytes_val):
     """Human-readable file size."""
+    sign = "-" if bytes_val < 0 else ""
+    bytes_val = abs(bytes_val)
     if bytes_val < 1024:
-        return f"{bytes_val} B"
+        return f"{sign}{int(bytes_val)} B"
     elif bytes_val < 1024 * 1024:
-        return f"{bytes_val / 1024:.1f} KB"
+        return f"{sign}{bytes_val / 1024:.1f} KB"
     elif bytes_val < 1024 * 1024 * 1024:
-        return f"{bytes_val / (1024*1024):.1f} MB"
+        return f"{sign}{bytes_val / (1024*1024):.1f} MB"
     else:
-        return f"{bytes_val / (1024*1024*1024):.2f} GB"
+        return f"{sign}{bytes_val / (1024*1024*1024):.2f} GB"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -378,7 +380,7 @@ def generate_voiceover_wav(out_path, text, ffmpeg_path=None):
 
     success = False
     try:
-        from gtts import gTTS
+        from gtts import gTTS  # type: ignore
         lang = 'en'
         for c in text:
             if '\u3040' <= c <= '\u30ff': lang = 'ja'; break
@@ -540,6 +542,21 @@ def scan_ipod_existing(ipod_path):
                 key = (rel_to_music.lower(), os.path.splitext(fname)[0].lower())
                 existing[key] = ipod_rel
     return existing
+
+
+def get_ipod_safe_key(folder, basename):
+    """Generate the matching key used for existing files based on non-ASCII rules."""
+    def is_ascii(s):
+        return all(ord(c) < 128 for c in s)
+    f_safe = folder if folder else "_root"
+    if not is_ascii(f_safe):
+        import hashlib
+        f_safe = "F_" + hashlib.md5(f_safe.encode('utf-8', 'ignore')).hexdigest()[:8]
+    b_safe = basename
+    if not is_ascii(b_safe):
+        import hashlib
+        b_safe = "T_" + hashlib.md5(b_safe.encode('utf-8', 'ignore')).hexdigest()[:8]
+    return (f_safe.lower(), b_safe.lower())
 
 
 def sync_to_ipod(ipod_path, source_files, target_format, target_bitrate, convert_all,
@@ -876,19 +893,19 @@ def detect_ipod_drives():
 # ══════════════════════════════════════════════════════════════════════════════
 
 class AntigravityApp:
-    BG_DARK    = "#0d1117"
-    BG_PANEL   = "#161b22"
-    BG_INPUT   = "#21262d"
-    BG_CARD    = "#1c2129"
-    FG_TEXT    = "#c9d1d9"
-    FG_DIM     = "#8b949e"
-    FG_BRIGHT  = "#f0f6fc"
-    ACCENT     = "#58a6ff"
-    ACCENT_HOV = "#79c0ff"
-    SUCCESS    = "#3fb950"
-    WARNING    = "#d29922"
-    ERROR      = "#f85149"
-    BORDER     = "#30363d"
+    BG_DARK    = "#141218"
+    BG_PANEL   = "#211F26"
+    BG_INPUT   = "#36343B"
+    BG_CARD    = "#2B2930"
+    FG_TEXT    = "#E6E1E5"
+    FG_DIM     = "#CAC4D0"
+    FG_BRIGHT  = "#FFFFFF"
+    ACCENT     = "#D0BCFF"
+    ACCENT_HOV = "#E8DEF8"
+    SUCCESS    = "#9BCF53"
+    WARNING    = "#F4B678"
+    ERROR      = "#F2B8B5"
+    BORDER     = "#332D41"
 
     BITRATES = ["64", "96", "128", "160", "192", "256", "320"]
     FORMATS  = ["MP3", "AAC"]
@@ -897,7 +914,7 @@ class AntigravityApp:
         self.root = tk.Tk()
         self.root.title(f"{__title__} v{__version__}")
         self.root.geometry("1200x700")
-        self.root.minsize(1000, 550)
+        self.root.minsize(1050, 680)
         self.root.configure(bg=self.BG_DARK)
 
         # Dark title bar
@@ -968,25 +985,25 @@ class AntigravityApp:
         style.theme_use("clam")
         style.configure("Dark.TFrame", background=self.BG_DARK)
         style.configure("Card.TFrame", background=self.BG_CARD)
-        style.configure("Dark.TLabel", background=self.BG_DARK, foreground=self.FG_TEXT, font=("Segoe UI", 10))
-        style.configure("Title.TLabel", background=self.BG_DARK, foreground=self.FG_BRIGHT, font=("Segoe UI", 20, "bold"))
-        style.configure("Subtitle.TLabel", background=self.BG_DARK, foreground=self.FG_DIM, font=("Segoe UI", 9))
-        style.configure("Card.TLabel", background=self.BG_CARD, foreground=self.FG_TEXT, font=("Segoe UI", 10))
-        style.configure("CardDim.TLabel", background=self.BG_CARD, foreground=self.FG_DIM, font=("Segoe UI", 9))
-        style.configure("CardBright.TLabel", background=self.BG_CARD, foreground=self.FG_BRIGHT, font=("Segoe UI", 11, "bold"))
-        style.configure("CardValue.TLabel", background=self.BG_CARD, foreground=self.ACCENT, font=("Segoe UI", 11, "bold"))
-        style.configure("CardWarn.TLabel", background=self.BG_CARD, foreground=self.ERROR, font=("Segoe UI", 10, "bold"))
-        style.configure("CardOk.TLabel", background=self.BG_CARD, foreground=self.SUCCESS, font=("Segoe UI", 10, "bold"))
-        style.configure("Status.TLabel", background=self.BG_DARK, foreground=self.SUCCESS, font=("Segoe UI", 11, "bold"))
-        style.configure("Accent.TButton", background=self.ACCENT, foreground="#0d1117",
-                         font=("Segoe UI", 11, "bold"), padding=(20, 10), borderwidth=0)
+        style.configure("Dark.TLabel", background=self.BG_DARK, foreground=self.FG_TEXT, font=("Segoe UI Variable Display", 11))
+        style.configure("Title.TLabel", background=self.BG_DARK, foreground=self.FG_BRIGHT, font=("Segoe UI Variable Display", 26, "bold"))
+        style.configure("Subtitle.TLabel", background=self.BG_DARK, foreground=self.FG_DIM, font=("Segoe UI Variable Display", 11))
+        style.configure("Card.TLabel", background=self.BG_CARD, foreground=self.FG_TEXT, font=("Segoe UI Variable Display", 11))
+        style.configure("CardDim.TLabel", background=self.BG_CARD, foreground=self.FG_DIM, font=("Segoe UI Variable Display", 11))
+        style.configure("CardBright.TLabel", background=self.BG_CARD, foreground=self.FG_BRIGHT, font=("Segoe UI Variable Display", 13, "bold"))
+        style.configure("CardValue.TLabel", background=self.BG_CARD, foreground=self.ACCENT, font=("Segoe UI Variable Display", 13, "bold"))
+        style.configure("CardWarn.TLabel", background=self.BG_CARD, foreground=self.ERROR, font=("Segoe UI Variable Display", 11, "bold"))
+        style.configure("CardOk.TLabel", background=self.BG_CARD, foreground=self.SUCCESS, font=("Segoe UI Variable Display", 11, "bold"))
+        style.configure("Status.TLabel", background=self.BG_DARK, foreground=self.SUCCESS, font=("Segoe UI Variable Display", 13, "bold"))
+        style.configure("Accent.TButton", background=self.ACCENT, foreground="#381E72",
+                         font=("Segoe UI Variable Display", 13, "bold"), padding=(24, 10), borderwidth=0)
         style.map("Accent.TButton", background=[("active", self.ACCENT_HOV), ("disabled", self.BG_INPUT)],
                   foreground=[("disabled", self.FG_DIM)])
         style.configure("Secondary.TButton", background=self.BG_INPUT, foreground=self.FG_TEXT,
-                         font=("Segoe UI", 9), padding=(10, 5), borderwidth=0)
+                         font=("Segoe UI Variable Display", 11), padding=(12, 6), borderwidth=0)
         style.map("Secondary.TButton", background=[("active", self.BORDER)])
         style.configure("Small.TButton", background=self.BG_INPUT, foreground=self.FG_TEXT,
-                         font=("Segoe UI", 8), padding=(6, 3), borderwidth=0)
+                         font=("Segoe UI Variable Display", 10), padding=(12, 6), borderwidth=0)
         style.map("Small.TButton", background=[("active", self.BORDER)])
         style.configure("Dark.TCombobox", fieldbackground=self.BG_INPUT, background=self.BG_INPUT,
                          foreground=self.FG_TEXT, arrowcolor=self.ACCENT, borderwidth=1, relief="flat")
@@ -997,13 +1014,13 @@ class AntigravityApp:
 
         style.configure("Panel.TFrame", background=self.BG_PANEL)
         style.configure("green.Horizontal.TProgressbar", troughcolor=self.BG_INPUT,
-                         background=self.ACCENT, borderwidth=0, thickness=8)
+                         background=self.ACCENT, borderwidth=0, thickness=12)
         style.configure("space.Horizontal.TProgressbar", troughcolor=self.BG_INPUT,
-                         background=self.SUCCESS, borderwidth=0, thickness=12)
+                         background=self.SUCCESS, borderwidth=0, thickness=20)
         style.configure("spacewarn.Horizontal.TProgressbar", troughcolor=self.BG_INPUT,
-                         background=self.ERROR, borderwidth=0, thickness=12)
+                         background=self.ERROR, borderwidth=0, thickness=20)
         style.configure("Dark.TCheckbutton", background=self.BG_CARD, foreground=self.FG_TEXT,
-                         font=("Segoe UI", 9))
+                         font=("Segoe UI Variable Display", 11))
         style.map("Dark.TCheckbutton", background=[("active", self.BG_CARD)])
 
     def _build_ui(self):
@@ -1013,7 +1030,7 @@ class AntigravityApp:
 
         # ── Header bar ───────────────────────────────────────────────────
         header = ttk.Frame(root_frame, style="Dark.TFrame")
-        header.pack(fill=tk.X, padx=16, pady=(10, 0))
+        header.pack(fill=tk.X, padx=24, pady=(24, 8))
         ttk.Label(header, text="\u2B21  Antigravity", style="Title.TLabel").pack(side=tk.LEFT)
         sub_text = f"iPod Shuffle 4G Sync Manager  \u2022  v{__version__}"
         if not self.ffmpeg_path:
@@ -1030,12 +1047,30 @@ class AntigravityApp:
         #  LEFT PANEL — Controls
         # ═══════════════════════════════════════════════════════════════
         left_border = tk.Frame(body, bg=self.BORDER)
-        left_inner = ttk.Frame(left_border, style="Dark.TFrame")
-        left_inner.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
-        body.add(left_border, minsize=300, width=340)
+        body.add(left_border, minsize=360, width=380)
+
+        self._left_canvas = tk.Canvas(left_border, bg=self.BG_DARK, highlightthickness=0, bd=0)
+        left_scroll = ttk.Scrollbar(left_border, orient=tk.VERTICAL, command=self._left_canvas.yview)
+        
+        left_inner = ttk.Frame(self._left_canvas, style="Dark.TFrame")
+        
+        def _on_left_inner_configure(e):
+            self._left_canvas.configure(scrollregion=self._left_canvas.bbox("all"))
+        left_inner.bind("<Configure>", _on_left_inner_configure)
+        
+        self._left_canvas_window = self._left_canvas.create_window((0, 0), window=left_inner, anchor="nw")
+        
+        def _on_left_canvas_configure(e):
+            self._left_canvas.itemconfig(self._left_canvas_window, width=e.width)
+        self._left_canvas.bind("<Configure>", _on_left_canvas_configure)
+        
+        self._left_canvas.configure(yscrollcommand=left_scroll.set)
+        
+        left_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self._left_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=1, pady=1)
 
         left = ttk.Frame(left_inner, style="Dark.TFrame")
-        left.pack(fill=tk.BOTH, expand=True, padx=12, pady=8)
+        left.pack(fill=tk.BOTH, expand=True, padx=24, pady=24)
 
         # ── iPod Drive ────────────────────────────────────────────────
         ttk.Label(left, text="iPod Drive", style="Dark.TLabel").pack(anchor="w")
@@ -1043,7 +1078,7 @@ class AntigravityApp:
         row1.pack(fill=tk.X, pady=(2, 8))
         self.drive_var = tk.StringVar()
         self.drive_combo = ttk.Combobox(row1, textvariable=self.drive_var, state="readonly",
-                                         style="Dark.TCombobox", font=("Segoe UI", 9))
+                                         style="Dark.TCombobox", font=("Segoe UI Variable Display", 11))
         self.drive_combo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
         self.drive_combo.bind("<<ComboboxSelected>>", lambda e: self._recalculate())
         self.btn_refresh = ttk.Button(row1, text="\u21BB", style="Small.TButton",
@@ -1061,7 +1096,7 @@ class AntigravityApp:
         row2 = ttk.Frame(left, style="Dark.TFrame")
         row2.pack(fill=tk.X, pady=(2, 10))
         self.music_var = tk.StringVar()
-        self.music_entry = tk.Entry(row2, textvariable=self.music_var, font=("Segoe UI", 9),
+        self.music_entry = tk.Entry(row2, textvariable=self.music_var, font=("Segoe UI Variable Display", 11),
                                      bg=self.BG_INPUT, fg=self.FG_TEXT, insertbackground=self.FG_TEXT,
                                      relief="flat", bd=4, state="readonly",
                                      readonlybackground=self.BG_INPUT)
@@ -1080,36 +1115,36 @@ class AntigravityApp:
 
         tc_hdr = tk.Frame(tc_card, bg=self.BG_CARD)
         tc_hdr.pack(fill=tk.X, padx=10, pady=(8, 4))
-        tk.Label(tc_hdr, text="Transcoding", font=("Segoe UI", 10, "bold"),
+        tk.Label(tc_hdr, text="Transcoding", font=("Segoe UI Variable Display", 11, "bold"),
                  bg=self.BG_CARD, fg=self.FG_BRIGHT).pack(side=tk.LEFT)
 
         tc_row = tk.Frame(tc_card, bg=self.BG_CARD)
         tc_row.pack(fill=tk.X, padx=10, pady=(0, 4))
-        tk.Label(tc_row, text="Format:", font=("Segoe UI", 9),
+        tk.Label(tc_row, text="Format:", font=("Segoe UI Variable Display", 11),
                  bg=self.BG_CARD, fg=self.FG_TEXT).pack(side=tk.LEFT, padx=(0, 4))
         self.format_var = tk.StringVar(value="MP3")
         fmt_combo = ttk.Combobox(tc_row, textvariable=self.format_var, values=self.FORMATS,
                                   state="readonly" if self.ffmpeg_path else "disabled",
-                                  style="Dark.TCombobox", font=("Segoe UI", 9), width=5)
+                                  style="Dark.TCombobox", font=("Segoe UI Variable Display", 11), width=5)
         fmt_combo.pack(side=tk.LEFT, padx=(0, 10))
         fmt_combo.bind("<<ComboboxSelected>>", lambda e: self._recalculate())
 
-        tk.Label(tc_row, text="Bitrate:", font=("Segoe UI", 9),
+        tk.Label(tc_row, text="Bitrate:", font=("Segoe UI Variable Display", 11),
                  bg=self.BG_CARD, fg=self.FG_TEXT).pack(side=tk.LEFT, padx=(0, 4))
         self.bitrate_var = tk.StringVar(value="128")
         br_combo = ttk.Combobox(tc_row, textvariable=self.bitrate_var, values=self.BITRATES,
                                  state="readonly" if self.ffmpeg_path else "disabled",
-                                 style="Dark.TCombobox", font=("Segoe UI", 9), width=5)
+                                 style="Dark.TCombobox", font=("Segoe UI Variable Display", 11), width=5)
         br_combo.pack(side=tk.LEFT, padx=(0, 2))
         br_combo.bind("<<ComboboxSelected>>", lambda e: self._recalculate())
-        tk.Label(tc_row, text="kbps", font=("Segoe UI", 8),
+        tk.Label(tc_row, text="kbps", font=("Segoe UI Variable Display", 10),
                  bg=self.BG_CARD, fg=self.FG_DIM).pack(side=tk.LEFT)
 
         tc_opts = tk.Frame(tc_card, bg=self.BG_CARD)
         tc_opts.pack(fill=tk.X, padx=10, pady=(0, 8))
         self.convert_all_var = tk.BooleanVar(value=False)
         self.convert_check = tk.Checkbutton(tc_opts, text="Re-encode all",
-                                             variable=self.convert_all_var, font=("Segoe UI", 8),
+                                             variable=self.convert_all_var, font=("Segoe UI Variable Display", 10),
                                              bg=self.BG_CARD, fg=self.FG_TEXT,
                                              selectcolor=self.BG_INPUT, activebackground=self.BG_CARD,
                                              command=self._recalculate)
@@ -1117,7 +1152,7 @@ class AntigravityApp:
 
         self.voiceover_var = tk.BooleanVar(value=True)
         self.voiceover_check = tk.Checkbutton(tc_opts, text="VoiceOver",
-                                               variable=self.voiceover_var, font=("Segoe UI", 8),
+                                               variable=self.voiceover_var, font=("Segoe UI Variable Display", 10),
                                                bg=self.BG_CARD, fg=self.FG_TEXT,
                                                selectcolor=self.BG_INPUT, activebackground=self.BG_CARD,
                                                command=self._recalculate)
@@ -1130,7 +1165,7 @@ class AntigravityApp:
         sd_card = tk.Frame(left, bg=self.BG_CARD)
         sd_card.pack(fill=tk.X, pady=(0, 8))
 
-        tk.Label(sd_card, text="Space Dashboard", font=("Segoe UI", 10, "bold"),
+        tk.Label(sd_card, text="Space Dashboard", font=("Segoe UI Variable Display", 11, "bold"),
                  bg=self.BG_CARD, fg=self.FG_BRIGHT).pack(anchor="w", padx=10, pady=(8, 4))
 
         stats_frame = tk.Frame(sd_card, bg=self.BG_CARD)
@@ -1138,9 +1173,9 @@ class AntigravityApp:
         stats_frame.columnconfigure(1, weight=1)
 
         def add_stat(row, label_text, var_name):
-            tk.Label(stats_frame, text=label_text, font=("Segoe UI", 8),
+            tk.Label(stats_frame, text=label_text, font=("Segoe UI Variable Display", 10),
                      bg=self.BG_CARD, fg=self.FG_DIM).grid(row=row, column=0, sticky="w", padx=(0, 4), pady=1)
-            lbl = tk.Label(stats_frame, text="--", font=("Segoe UI", 9, "bold"),
+            lbl = tk.Label(stats_frame, text="--", font=("Segoe UI Variable Display", 11, "bold"),
                            bg=self.BG_CARD, fg=self.ACCENT)
             lbl.grid(row=row, column=1, sticky="w", pady=1)
             setattr(self, var_name, lbl)
@@ -1158,12 +1193,12 @@ class AntigravityApp:
         self.space_bar = ttk.Progressbar(bar_frame, variable=self.space_pct_var,
                                           maximum=100, style="space.Horizontal.TProgressbar")
         self.space_bar.pack(fill=tk.X)
-        self.space_status_label = tk.Label(sd_card, text="", font=("Segoe UI", 8),
+        self.space_status_label = tk.Label(sd_card, text="", font=("Segoe UI Variable Display", 10),
                                            bg=self.BG_CARD, fg=self.FG_DIM)
         self.space_status_label.pack(anchor="w", padx=10, pady=(0, 8))
 
-        # ── Spacer to push buttons down ──────────────────────────────
-        ttk.Frame(left, style="Dark.TFrame").pack(fill=tk.BOTH, expand=True)
+        # ── Spacer to keep consistent gap ──────────────────────────────
+        tk.Frame(left, height=20, bg=self.BG_DARK).pack(fill=tk.X)
 
         # ── Action Buttons ───────────────────────────────────────────
         self.progress_var = tk.DoubleVar(value=0)
@@ -1186,7 +1221,7 @@ class AntigravityApp:
         ToolTip(self.rebuild_btn, "Skip copying. Scan iPod contents and rebuild database only")
 
         self.status_label = ttk.Label(left, text="Select iPod drive and music folder to begin.",
-                                       style="Subtitle.TLabel")
+                                       style="Subtitle.TLabel", wraplength=360)
         self.status_label.pack(anchor="w", pady=(2, 0))
 
         # ═══════════════════════════════════════════════════════════════
@@ -1198,7 +1233,7 @@ class AntigravityApp:
         body.add(right_border, minsize=400)
 
         right = ttk.Frame(right_inner, style="Dark.TFrame")
-        right.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+        right.pack(fill=tk.BOTH, expand=True, padx=24, pady=24)
 
         # ── Selection Panel ──────────────────────────────────────────
         sel_border = tk.Frame(right, bg=self.BORDER, bd=0)
@@ -1209,11 +1244,11 @@ class AntigravityApp:
         # Search bar
         search_frame = tk.Frame(sel_outer, bg=self.BG_CARD)
         search_frame.pack(fill=tk.X)
-        tk.Label(search_frame, text=" \u2315", font=("Segoe UI", 11),
+        tk.Label(search_frame, text=" \u2315", font=("Segoe UI Variable Display", 13),
                  bg=self.BG_CARD, fg=self.FG_DIM).pack(side=tk.LEFT, padx=(6, 0))
         self._search_var = tk.StringVar()
         self._search_var.trace_add("write", lambda *a: self._apply_search())
-        search_entry = tk.Entry(search_frame, textvariable=self._search_var, font=("Segoe UI", 10),
+        search_entry = tk.Entry(search_frame, textvariable=self._search_var, font=("Segoe UI Variable Display", 11),
                                 bg=self.BG_INPUT, fg=self.FG_TEXT, insertbackground=self.FG_TEXT,
                                 relief="flat", bd=4)
         search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=4, pady=4)
@@ -1226,14 +1261,14 @@ class AntigravityApp:
         # Header row
         self.sel_hdr = tk.Frame(sel_outer, bg=self.BG_CARD)
         self.sel_hdr.pack(fill=tk.X)
-        tk.Label(self.sel_hdr, text="  Playlist / Track", font=("Segoe UI", 9, "bold"),
+        tk.Label(self.sel_hdr, text="  Playlist / Track", font=("Segoe UI Variable Display", 11, "bold"),
                  bg=self.BG_CARD, fg=self.FG_TEXT, anchor="w").pack(side=tk.LEFT, fill=tk.X, expand=True, padx=4, pady=3)
-        tk.Label(self.sel_hdr, text="Size", font=("Segoe UI", 9, "bold"),
+        tk.Label(self.sel_hdr, text="Size", font=("Segoe UI Variable Display", 11, "bold"),
                  bg=self.BG_CARD, fg=self.FG_TEXT, width=10, anchor="e").pack(side=tk.RIGHT, padx=8, pady=3)
 
         # Scrollable canvas
         self._sel_canvas = tk.Canvas(sel_outer, bg=self.BG_PANEL, highlightthickness=0, bd=0)
-        sel_scroll = tk.Scrollbar(sel_outer, orient=tk.VERTICAL, command=self._sel_canvas.yview)
+        sel_scroll = ttk.Scrollbar(sel_outer, orient=tk.VERTICAL, command=self._sel_canvas.yview)
         self._sel_inner = tk.Frame(self._sel_canvas, bg=self.BG_PANEL)
 
         self._sel_inner.bind("<Configure>",
@@ -1270,7 +1305,7 @@ class AntigravityApp:
         log_inner.pack(fill=tk.BOTH, expand=False, padx=1, pady=1)
 
         self.log_text = tk.Text(log_inner, bg=self.BG_PANEL, fg=self.FG_DIM,
-                                font=("Consolas", 9), wrap=tk.WORD,
+                                font=("Consolas", 10), wrap=tk.WORD,
                                 insertbackground=self.FG_TEXT, relief="flat",
                                 padx=10, pady=6, state=tk.DISABLED, height=7,
                                 selectbackground=self.ACCENT, selectforeground=self.BG_DARK)
@@ -1288,6 +1323,8 @@ class AntigravityApp:
             w_path = str(event.widget)
             if w_path.startswith(str(self._sel_canvas)):
                 self._sel_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            elif hasattr(self, '_left_canvas') and w_path.startswith(str(self._left_canvas)):
+                self._left_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
             elif w_path.startswith(str(self.log_text)):
                 self.log_text.yview_scroll(int(-1 * (event.delta / 120)), "units")
         self.root.bind_all("<MouseWheel>", _global_mousewheel)
@@ -1395,12 +1432,12 @@ class AntigravityApp:
             self._folder_expanded[folder_name] = True
 
             folder_frame = tk.Frame(self._sel_inner, bg=self.BG_CARD)
-            folder_frame.pack(fill=tk.X, padx=2, pady=(4, 0))
+            folder_frame.pack(fill=tk.X, padx=8, pady=(16, 4))
             self._folder_header_frames[folder_name] = folder_frame
 
             folder_size = sum(f["size"] for f in folders[folder_name])
 
-            toggle_btn = tk.Label(folder_frame, text="\u25BC", font=("Segoe UI", 9),
+            toggle_btn = tk.Label(folder_frame, text="\u25BC", font=("Segoe UI Variable Display", 11),
                                   bg=self.BG_CARD, fg=self.ACCENT, cursor="hand2", width=2)
             toggle_btn.pack(side=tk.LEFT, padx=(4, 0))
             toggle_btn.bind("<Button-1>", lambda e, fn=folder_name: self._toggle_folder(fn))
@@ -1408,14 +1445,14 @@ class AntigravityApp:
 
             cb = tk.Checkbutton(folder_frame,
                                 text=folder_name + f"  ({len(folders[folder_name])} tracks)",
-                                variable=folder_var, font=("Segoe UI", 10, "bold"),
+                                variable=folder_var, font=("Segoe UI Variable Display", 11, "bold"),
                                 bg=self.BG_CARD, fg=self.FG_BRIGHT,
                                 selectcolor=self.BG_INPUT, activebackground=self.BG_CARD,
                                 activeforeground=self.FG_BRIGHT, anchor="w",
                                 command=lambda fn=folder_name: self._on_folder_toggle(fn))
             cb.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=0, pady=2)
 
-            tk.Label(folder_frame, text=format_size(folder_size), font=("Segoe UI", 9),
+            tk.Label(folder_frame, text=format_size(folder_size), font=("Segoe UI Variable Display", 11),
                      bg=self.BG_CARD, fg=self.FG_DIM, width=10, anchor="e").pack(side=tk.RIGHT, padx=8)
 
             file_frames = []
@@ -1427,19 +1464,19 @@ class AntigravityApp:
                 self._folder_file_paths[folder_name].append(path)
 
                 file_row = tk.Frame(self._sel_inner, bg=self.BG_PANEL)
-                file_row.pack(fill=tk.X, padx=2)
+                file_row.pack(fill=tk.X, padx=8, pady=(2, 2))
 
                 basename = os.path.basename(path)
 
                 cb = tk.Checkbutton(file_row, text=f"  {basename}",
-                                    variable=file_var, font=("Segoe UI", 9),
+                                    variable=file_var, font=("Segoe UI Variable Display", 11),
                                     bg=self.BG_PANEL, fg=self.FG_TEXT,
                                     selectcolor=self.BG_INPUT, activebackground=self.BG_PANEL,
                                     activeforeground=self.FG_TEXT, anchor="w",
                                     command=self._recalculate)
-                cb.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(28, 4), pady=1)
+                cb.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(32, 8), pady=4)
 
-                tk.Label(file_row, text=format_size(f["size"]), font=("Segoe UI", 8),
+                tk.Label(file_row, text=format_size(f["size"]), font=("Segoe UI Variable Display", 10),
                          bg=self.BG_PANEL, fg=self.FG_DIM, width=10, anchor="e").pack(side=tk.RIGHT, padx=8)
 
                 file_frames.append(file_row)
@@ -1459,17 +1496,17 @@ class AntigravityApp:
             folder_frame.pack(fill=tk.X, padx=8, pady=(16, 4))
             self._folder_header_frames[folder_name] = folder_frame
 
-            toggle_btn = tk.Label(folder_frame, text="\u25BC", font=("Segoe UI", 12),
+            toggle_btn = tk.Label(folder_frame, text="\u25BC", font=("Segoe UI Variable Display", 14),
                                   bg=self.BG_PANEL, fg=self.ACCENT, cursor="hand2", width=2)
             toggle_btn.pack(side=tk.LEFT, padx=(0, 4))
             toggle_btn.bind("<Button-1>", lambda e, fn=folder_name: self._toggle_folder(fn))
             self._folder_toggle_btns[folder_name] = toggle_btn
 
-            tk.Label(folder_frame, text=folder_name, font=("Segoe UI", 14, "bold"),
+            tk.Label(folder_frame, text=folder_name, font=("Segoe UI Variable Display", 16, "bold"),
                      bg=self.BG_PANEL, fg=self.FG_BRIGHT).pack(side=tk.LEFT)
             
             cb = tk.Checkbutton(folder_frame, text="Sync Playlist",
-                                variable=folder_var, font=("Segoe UI", 9),
+                                variable=folder_var, font=("Segoe UI Variable Display", 11),
                                 bg=self.BG_PANEL, fg=self.FG_TEXT,
                                 selectcolor=self.BG_INPUT, activebackground=self.BG_PANEL,
                                 activeforeground=self.FG_TEXT,
@@ -1495,7 +1532,7 @@ class AntigravityApp:
                 img_lbl.pack(fill=tk.X, padx=10, pady=(10, 4))
                 
                 basename = os.path.basename(path)
-                title_lbl = tk.Label(card, text=basename[:40], font=("Segoe UI", 9), bg=self.BG_CARD, fg=self.FG_TEXT, wraplength=130, justify=tk.CENTER)
+                title_lbl = tk.Label(card, text=basename[:40], font=("Segoe UI Variable Display", 11), bg=self.BG_CARD, fg=self.FG_TEXT, wraplength=130, justify=tk.CENTER)
                 title_lbl.pack(fill=tk.BOTH, expand=True, padx=4)
 
                 cb = tk.Checkbutton(card, text="", variable=file_var, bg=self.BG_CARD, 
@@ -1625,9 +1662,9 @@ class AntigravityApp:
                 finfo = self._file_map.get(path)
                 if not finfo:
                     continue
-                folder = finfo["folder"] if finfo["folder"] else "_root"
+                folder = finfo["folder"]
                 basename = os.path.splitext(os.path.basename(path))[0]
-                key = (folder.lower(), basename.lower())
+                key = get_ipod_safe_key(folder, basename)
 
                 if key in existing:
                     self._file_vars[path].set(False)
@@ -1753,9 +1790,9 @@ class AntigravityApp:
         new_files = []
         existing_count = 0
         for f in self._source_files:
-            folder = f["folder"] if f["folder"] else "_root"
+            folder = f["folder"]
             basename = os.path.splitext(os.path.basename(f["path"]))[0]
-            key = (folder.lower(), basename.lower())
+            key = get_ipod_safe_key(folder, basename)
             if key in existing and not convert_all:
                 existing_count += 1
             else:
