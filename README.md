@@ -26,7 +26,7 @@ Antigravity is a zero-dependency, self-contained tool that lets you manage music
 ## Quick Start
 
 ### From the compiled executable
-1. Download `antigravity.exe` from the releases
+1. Run `antigravity_latest.exe` located inside the `releases/` folder
 2. Plug in your iPod Shuffle 4G
 3. Run `antigravity.exe`
 4. Select your iPod drive and music folder
@@ -41,9 +41,16 @@ python antigravity.py
 
 ### Building the executable
 ```bash
-python -m PyInstaller --onefile --noconsole --name antigravity antigravity.py
+pyinstaller --clean -y antigravity.spec
 ```
-The output will be in `dist/antigravity.exe`.
+The output will natively compile into the `dist/` directory, which you can simply move into the `releases/` folder.
+
+## Repository Structure
+
+- `releases/`: Contains the pre-compiled standalone `.exe` binaries for immediate execution without Python.
+- `archive/`: Stores the old prototype `.py` files and tests from previous development sessions.
+- `tests/mock_data/`: Holds the mock iPod structures (like `iPod_Control`) used for local offline development.
+- `antigravity.py`: The main, self-contained Python source code.
 
 ## How It Works
 
