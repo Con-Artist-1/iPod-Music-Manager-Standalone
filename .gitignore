@@ -1,6 +1,8 @@
 /dist/
 /build/
-*.spec
+/releases/
 __pycache__/
 *.pyc
 *.pyo
+*.spec
+ffmpeg.exe
