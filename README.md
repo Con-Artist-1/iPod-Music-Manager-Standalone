@@ -1,4 +1,11 @@
-# ⬡ iPod Music Manager
+<p align="center">
+  <img src="logo_preview.png" alt="iPod Music Manager Logo" width="150"/>
+</p>
+
+# iPod Music Manager
+
+> **Note:** I am a programming newbie and this complete tool was built entirely as a passion project with the help of AI! 🤖
+
 
 **A standalone iPod Shuffle 4th Generation sync manager for Windows — no iTunes required.**
 
@@ -66,6 +73,26 @@ This application mathematically reverse-engineers the iPod Shuffle 4G's `iTunesS
 | `lphs` (Playlist) | Playlist record with type, dbid, and track index list |
 
 VoiceOver files are generated as WAV speech in `iPod_Control/Speakable/Tracks/` and `iPod_Control/Speakable/Playlists/`, keyed by the reversed hex of each item's 8-byte `dbid`.
+
+## File Structure on the iPod
+
+```text
+iPod_Control/
+├── iTunes/
+│   └── iTunesSD          ← binary database (built by iPod Music Manager)
+├── Music/
+│   ├── Mixed/            ← playlist folder = subfolder name
+│   │   ├── song1.mp3
+│   │   └── song2.mp3
+│   └── ASMR/
+│       └── track.m4a
+└── Speakable/            ← VoiceOver audio (generated)
+    ├── Tracks/
+    │   └── <dbid_hex>.wav
+    └── Playlists/
+        └── <dbid_hex>.wav
+```
+
 
 ## Configuration Data
 
