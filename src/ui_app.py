@@ -21,14 +21,13 @@ from utils import (
 )
 from database import build_itunes_db
 from sync_engine import sync_to_ipod
-from omni_sync import sync_to_omni
 from ui_theme import COLORS, ToolTip, setup_styles
 
 
 class AntigravityApp:
 
     BITRATES = ["64", "96", "128", "160", "192", "256", "320"]
-    FORMATS  = ["MP3", "AAC"]
+    FORMATS  = ["AAC (VBR Optimized)", "AAC (CBR)", "MP3 (CBR)"]
 
     def __init__(self):
         self.root = tk.Tk()
@@ -124,7 +123,7 @@ class AntigravityApp:
         # ═══════════════════════════════════════════════════════════════
         root_frame = tk.Frame(self.root, bg=COLORS["BG_DARK"])
         root_frame.pack(fill=tk.BOTH, expand=True)
-        root_frame.columnconfigure(0, minsize=390)
+        root_frame.columnconfigure(0, minsize=415)
         root_frame.columnconfigure(1, weight=1)
         root_frame.rowconfigure(1, weight=1)
 
@@ -250,11 +249,11 @@ class AntigravityApp:
         tc_row.pack(fill=tk.X, padx=12, pady=(0, 4))
         tk.Label(tc_row, text="Format", font=(_font, 10),
                  bg=COLORS["BG_CARD"], fg=COLORS["FG_DIM"]).pack(side=tk.LEFT, padx=(0, 4))
-        self.format_var = tk.StringVar(value="MP3")
+        self.format_var = tk.StringVar(value="AAC (VBR Optimized)")
         fmt_combo = ttk.Combobox(tc_row, textvariable=self.format_var, values=self.FORMATS,
                                   state="readonly" if self.ffmpeg_path else "disabled",
-                                  style="Dark.TCombobox", font=(_font, 10), width=5)
-        fmt_combo.pack(side=tk.LEFT, padx=(0, 12))
+                                  style="Dark.TCombobox", font=(_font, 10), width=19)
+        fmt_combo.pack(side=tk.LEFT, padx=(0, 8))
         fmt_combo.bind("<<ComboboxSelected>>", lambda e: self._recalculate())
 
         tk.Label(tc_row, text="Bitrate", font=(_font, 10),
@@ -318,8 +317,9 @@ class AntigravityApp:
         add_stat(1, "Files:", "_lbl_file_count")
         add_stat(2, "Output:", "_lbl_estimated_size")
         add_stat(3, "Playlists:", "_lbl_playlist_count")
-        add_stat(4, "Free:", "_lbl_free_space")
-        add_stat(5, "After:", "_lbl_remaining")
+        add_stat(4, "Freed:", "_lbl_space_freed")
+        add_stat(5, "Free:", "_lbl_free_space")
+        add_stat(6, "After:", "_lbl_remaining")
 
         bar_frame = tk.Frame(sd_card, bg=COLORS["BG_CARD"])
         bar_frame.pack(fill=tk.X, padx=12, pady=(4, 2))
@@ -502,12 +502,19 @@ class AntigravityApp:
         self.root.bind_all("<MouseWheel>", _global_mousewheel)
 
     def _refresh_drives(self):
+        drives = detect_ipod_drives()
         self._drive_paths = {}
-        display_list = ["Omni (Auto-Detect)"]
+        display_list = []
+        for path, label in drives:
+            display_list.append(label)
+            self._drive_paths[label] = path
         self.drive_combo["values"] = display_list
-        self.drive_combo.current(0)
-        self.drive_var.set(display_list[0])
-        self._log("Omni mode ready. iTunes COM will auto-detect your devices during sync.")
+        if display_list:
+            self.drive_combo.current(0)
+            self._log(f"Detected {len(display_list)} iPod drive(s)")
+        else:
+            self.drive_var.set("")
+            self._log("No iPod drives detected. Use Browse to select manually.")
         self._ipod_scan_cache = {}
         self._ipod_scan_cache_drive = None
         self._recalculate()
@@ -968,7 +975,7 @@ class AntigravityApp:
         convert_all = self.convert_all_var.get()
 
         # Use cached iPod scan to avoid disk I/O on every checkbox toggle
-        if ipod_path and os.path.isdir(ipod_path) and not convert_all:
+        if ipod_path and os.path.isdir(ipod_path):
             if self._ipod_scan_cache_drive != ipod_path:
                 self._ipod_scan_cache = scan_ipod_existing(ipod_path)
                 self._ipod_scan_cache_drive = ipod_path
@@ -978,12 +985,15 @@ class AntigravityApp:
 
         new_files = []
         existing_count = 0
+        files_to_keep = set()
+
         for f in self._source_files:
             folder = f["folder"]
             basename = os.path.splitext(os.path.basename(f["path"]))[0]
             key = get_ipod_safe_key(folder, basename)
             if key in existing and not convert_all:
                 existing_count += 1
+                files_to_keep.add(key)
             else:
                 new_files.append(f)
 
@@ -1006,8 +1016,18 @@ class AntigravityApp:
             total_disk, used_disk, free_disk = get_disk_usage(ipod_path)
         else:
             total_disk, used_disk, free_disk = 0, 0, 0
+            
+        space_to_be_freed = 0
+        if ipod_path and os.path.isdir(ipod_path) and existing:
+            for key, ipod_rel in existing.items():
+                if key not in files_to_keep:
+                    full_p = os.path.normpath(os.path.join(ipod_path, ipod_rel.lstrip("/")))
+                    try:
+                        space_to_be_freed += os.path.getsize(full_p)
+                    except Exception:
+                        pass
 
-        remaining = free_disk - self._estimated_size
+        remaining = free_disk + space_to_be_freed - self._estimated_size
         fits = remaining >= 0
 
         # Update labels
@@ -1017,6 +1037,9 @@ class AntigravityApp:
         self._lbl_file_count.configure(text=f"{num_files} ({new_ct} new, {exist_ct} on iPod)" if num_files else "--")
         self._lbl_estimated_size.configure(text=f"~{format_size(self._estimated_size)} to transfer" if new_ct else ("0 B (all synced)" if num_files else "--"))
         self._lbl_playlist_count.configure(text=str(num_playlists) if num_files else "--")
+        self._lbl_space_freed.configure(
+            text=f"~{format_size(space_to_be_freed)} (overwritten/swept)" if space_to_be_freed else "--"
+        )
         self._lbl_free_space.configure(text=format_size(free_disk) if total_disk else "--")
         self._lbl_remaining.configure(
             text=f"~{format_size(remaining)}" if (total_disk and num_files) else "--"
@@ -1026,7 +1049,7 @@ class AntigravityApp:
 
         # Space bar
         if total_disk > 0 and num_files > 0:
-            used_pct = ((used_disk + self._estimated_size) / total_disk) * 100
+            used_pct = ((total_disk - remaining) / total_disk) * 100
             self.space_pct_var.set(min(used_pct, 100))
             self.space_bar.configure(style="space.Horizontal.TProgressbar" if fits else "spacewarn.Horizontal.TProgressbar")
             self.space_status_label.configure(
@@ -1038,7 +1061,7 @@ class AntigravityApp:
             self.space_status_label.configure(text="", fg=COLORS["FG_DIM"])
 
         # Enable/disable sync button
-        can_sync = num_files > 0
+        can_sync = num_files > 0 and ipod_path and fits
         self.sync_btn.configure(state=tk.NORMAL if can_sync else tk.DISABLED)
 
     # ── Logging ──────────────────────────────────────────────────────────
@@ -1064,6 +1087,12 @@ class AntigravityApp:
     # ── Sync Action ──────────────────────────────────────────────────────
 
     def _start_sync(self):
+        drive_sel = self.drive_var.get()
+        ipod_path = self._drive_paths.get(drive_sel, "")
+
+        if not ipod_path or not os.path.isdir(ipod_path):
+            messagebox.showwarning("No Drive", "Please select a valid iPod drive.")
+            return
         if not self._source_files:
             messagebox.showwarning("No Music", "Please select a music folder with audio files.")
             return
@@ -1071,10 +1100,18 @@ class AntigravityApp:
         new_ct = self._new_file_count
         convert_all = self.convert_all_var.get()
 
-        msg = (f"{len(self._source_files)} tracks will be sent to the Omni Device.\n\n"
-               f"Note: Transcoding and database handling will be offloaded to iTunes COM.\n\nContinue?")
+        if convert_all:
+            msg = (f"Re-encode all: {len(self._source_files)} tracks will be transcoded to "
+                   f"{self.format_var.get()} {self.bitrate_var.get()}kbps "
+                   f"(existing files on iPod will be overwritten).\n\nContinue?")
+        elif new_ct == 0:
+            msg = "All files are already on the iPod. Only the database will be rebuilt.\n\nContinue?"
+        else:
+            msg = (f"{new_ct} new file(s) will be copied to the iPod "
+                   f"({format_size(self._estimated_size)}).\n"
+                   f"{self._existing_count} file(s) already on iPod will be kept.\n\nContinue?")
 
-        if not messagebox.askyesno("Confirm Omni Sync", msg):
+        if not messagebox.askyesno("Confirm Sync", msg):
             return
 
         self._clear_log()
@@ -1096,10 +1133,10 @@ class AntigravityApp:
             def progress_cb(cur, tot, phase):
                 self.root.after(0, self._set_progress, cur, tot, phase)
 
-            success, summary = sync_to_omni(
-                self._source_files,
-                target_format, target_bitrate,
-                self.ffmpeg_path, log_cb, progress_cb
+            success, summary = sync_to_ipod(
+                ipod_path, self._source_files,
+                target_format, target_bitrate, convert_all,
+                self.ffmpeg_path, voiceover_enabled, log_cb, progress_cb
             )
 
             def finish():

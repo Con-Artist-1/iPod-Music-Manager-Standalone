@@ -33,7 +33,7 @@ def generate_voiceover_wav(out_path, text, ffmpeg_path=None):
         try:
             creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
             result = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script],
-                                    capture_output=True, text=True, timeout=15, creationflags=creationflags)
+                                    capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=15, creationflags=creationflags)
             if result.returncode == 0 and os.path.isfile(out_path):
                 return "generated"
         except Exception:

@@ -11,7 +11,7 @@ import subprocess
 import ctypes
 import string
 
-__version__ = "1.0.2 (4G)"
+__version__ = "1.1.1 (4G)"
 __title__ = "iPod Music Manager"
 
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".ipod_manager_config.json")
@@ -121,6 +121,12 @@ def estimate_transcoded_size(file_info, target_bitrate_kbps, target_format):
 
     # Estimated output size at target bitrate
     estimated = int((target_bitrate_kbps * 1000 / 8) * duration_s)
+    
+    if "VBR" in target_format:
+        # VBR dynamically scales based on complexity, typically saving ~30-40% 
+        # storage over strict CBR while preserving identical perceptual quality.
+        estimated = int(estimated * 0.65)
+
     return max(estimated, 1024)  # minimum 1KB
 
 
@@ -237,30 +243,4 @@ def detect_ipod_drives():
                     pass
             bitmask >>= 1
     return drives
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  OMNI DEVICE CAPABILITIES
-# ══════════════════════════════════════════════════════════════════════════════
-
-def is_admin():
-    """Check if the Python process has Administrator UAC privileges."""
-    if sys.platform == "win32":
-        try:
-            return ctypes.windll.shell32.IsUserAnAdmin() != 0
-        except Exception:
-            return False
-    return False
-
-def get_mock_itunes_path():
-    """Locate the bundled proprietary iTunes installation directory."""
-    path = resource_path(os.path.join("tests", "mock_data", "Itunes files for use"))
-    if os.path.isdir(path):
-        return path
-    # Fallback to current working dir lookup if not running under PyInstaller correctly
-    alt_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tests", "mock_data", "Itunes files for use"))
-    if os.path.isdir(alt_path):
-        return alt_path
-    return None
-
 

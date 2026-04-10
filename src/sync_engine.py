@@ -48,17 +48,15 @@ def sync_to_ipod(ipod_path, source_files, target_format, target_bitrate, convert
             except Exception:
                 pass
 
-    # If re-encode all is checked, skip the existing scan so all files get re-processed
+    log("Scanning iPod for existing files...")
+    existing_on_ipod = scan_ipod_existing(ipod_path)
+    log(f"  Found {len(existing_on_ipod)} existing track(s) on iPod")
+
     if convert_all:
         log("Re-encode all: all files will be transcoded (existing files will be overwritten)...")
-        existing_on_ipod = {}
-    else:
-        log("Scanning iPod for existing files...")
-        existing_on_ipod = scan_ipod_existing(ipod_path)
-        log(f"  Found {len(existing_on_ipod)} existing track(s) on iPod")
 
     # Phase 2: Copy/Transcode only NEW files
-    out_ext = ".mp3" if target_format == "MP3" else ".m4a"
+    out_ext = ".mp3" if "MP3" in target_format else ".m4a"
     total = len(source_files)
     all_ipod_tracks = []   # ALL tracks (existing + new) for database
     playlists = {}         # folder_name -> [ipod_paths]
@@ -105,7 +103,7 @@ def sync_to_ipod(ipod_path, source_files, target_format, target_bitrate, convert
         ipod_rel = "/iPod_Control/Music/" + dest_subfolder + "/" + out_filename
 
         match_key = (dest_subfolder.lower(), safe_basename.lower())
-        if match_key in existing_on_ipod:
+        if match_key in existing_on_ipod and not convert_all:
             with lock:
                 skipped_count += 1
             res_ipod_rel = existing_on_ipod[match_key]
@@ -121,10 +119,14 @@ def sync_to_ipod(ipod_path, source_files, target_format, target_bitrate, convert
 
                 try:
                     cmd = [ffmpeg_path, "-y", "-i", src]
-                    if target_format == "MP3":
+                    if target_format == "MP3 (CBR)":
                         cmd += ["-codec:a", "libmp3lame", "-ar", "44100", "-ac", "2", "-b:a", f"{target_bitrate}k", "-threads", "1"]
-                    else:
+                    elif target_format == "AAC (CBR)":
                         cmd += ["-codec:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", f"{target_bitrate}k", "-threads", "1"]
+                    else:
+                        # AAC (VBR Optimized): map kbps to ffmpeg AAC -q:a target (0.1 to 2.0).
+                        vbr_target = str(round(int(target_bitrate) / 100.0, 2))
+                        cmd += ["-codec:a", "aac", "-ar", "44100", "-ac", "2", "-q:a", vbr_target, "-threads", "1"]
                     cmd += ["-map_metadata", "-1", "-vn", dest_file]
 
                     creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
