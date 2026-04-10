@@ -21,6 +21,7 @@ from utils import (
 )
 from database import build_itunes_db
 from sync_engine import sync_to_ipod
+from omni_sync import sync_to_omni
 from ui_theme import COLORS, ToolTip, setup_styles
 
 
@@ -501,19 +502,12 @@ class AntigravityApp:
         self.root.bind_all("<MouseWheel>", _global_mousewheel)
 
     def _refresh_drives(self):
-        drives = detect_ipod_drives()
         self._drive_paths = {}
-        display_list = []
-        for path, label in drives:
-            display_list.append(label)
-            self._drive_paths[label] = path
+        display_list = ["Omni (Auto-Detect)"]
         self.drive_combo["values"] = display_list
-        if display_list:
-            self.drive_combo.current(0)
-            self._log(f"Detected {len(display_list)} iPod drive(s)")
-        else:
-            self.drive_var.set("")
-            self._log("No iPod drives detected. Use Browse to select manually.")
+        self.drive_combo.current(0)
+        self.drive_var.set(display_list[0])
+        self._log("Omni mode ready. iTunes COM will auto-detect your devices during sync.")
         self._ipod_scan_cache = {}
         self._ipod_scan_cache_drive = None
         self._recalculate()
@@ -1044,7 +1038,7 @@ class AntigravityApp:
             self.space_status_label.configure(text="", fg=COLORS["FG_DIM"])
 
         # Enable/disable sync button
-        can_sync = num_files > 0 and ipod_path and fits
+        can_sync = num_files > 0
         self.sync_btn.configure(state=tk.NORMAL if can_sync else tk.DISABLED)
 
     # ── Logging ──────────────────────────────────────────────────────────
@@ -1070,12 +1064,6 @@ class AntigravityApp:
     # ── Sync Action ──────────────────────────────────────────────────────
 
     def _start_sync(self):
-        drive_sel = self.drive_var.get()
-        ipod_path = self._drive_paths.get(drive_sel, "")
-
-        if not ipod_path or not os.path.isdir(ipod_path):
-            messagebox.showwarning("No Drive", "Please select a valid iPod drive.")
-            return
         if not self._source_files:
             messagebox.showwarning("No Music", "Please select a music folder with audio files.")
             return
@@ -1083,18 +1071,10 @@ class AntigravityApp:
         new_ct = self._new_file_count
         convert_all = self.convert_all_var.get()
 
-        if convert_all:
-            msg = (f"Re-encode all: {len(self._source_files)} tracks will be transcoded to "
-                   f"{self.format_var.get()} {self.bitrate_var.get()}kbps "
-                   f"(existing files on iPod will be overwritten).\n\nContinue?")
-        elif new_ct == 0:
-            msg = "All files are already on the iPod. Only the database will be rebuilt.\n\nContinue?"
-        else:
-            msg = (f"{new_ct} new file(s) will be copied to the iPod "
-                   f"({format_size(self._estimated_size)}).\n"
-                   f"{self._existing_count} file(s) already on iPod will be kept.\n\nContinue?")
+        msg = (f"{len(self._source_files)} tracks will be sent to the Omni Device.\n\n"
+               f"Note: Transcoding and database handling will be offloaded to iTunes COM.\n\nContinue?")
 
-        if not messagebox.askyesno("Confirm Sync", msg):
+        if not messagebox.askyesno("Confirm Omni Sync", msg):
             return
 
         self._clear_log()
@@ -1116,10 +1096,10 @@ class AntigravityApp:
             def progress_cb(cur, tot, phase):
                 self.root.after(0, self._set_progress, cur, tot, phase)
 
-            success, summary = sync_to_ipod(
-                ipod_path, self._source_files,
-                target_format, target_bitrate, convert_all,
-                self.ffmpeg_path, voiceover_enabled, log_cb, progress_cb
+            success, summary = sync_to_omni(
+                self._source_files,
+                target_format, target_bitrate,
+                self.ffmpeg_path, log_cb, progress_cb
             )
 
             def finish():

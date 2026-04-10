@@ -238,3 +238,29 @@ def detect_ipod_drives():
             bitmask >>= 1
     return drives
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  OMNI DEVICE CAPABILITIES
+# ══════════════════════════════════════════════════════════════════════════════
+
+def is_admin():
+    """Check if the Python process has Administrator UAC privileges."""
+    if sys.platform == "win32":
+        try:
+            return ctypes.windll.shell32.IsUserAnAdmin() != 0
+        except Exception:
+            return False
+    return False
+
+def get_mock_itunes_path():
+    """Locate the bundled proprietary iTunes installation directory."""
+    path = resource_path(os.path.join("tests", "mock_data", "Itunes files for use"))
+    if os.path.isdir(path):
+        return path
+    # Fallback to current working dir lookup if not running under PyInstaller correctly
+    alt_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tests", "mock_data", "Itunes files for use"))
+    if os.path.isdir(alt_path):
+        return alt_path
+    return None
+
+
