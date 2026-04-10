@@ -55,7 +55,7 @@ def generate_voiceover_wav(out_path, text, ffmpeg_path=None):
         
         if ffmpeg_path and os.path.isfile(mp3_path):
             creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-            res = subprocess.run([ffmpeg_path, "-y", "-i", mp3_path, "-ac", "1", "-ar", "16000", out_path],
+            subprocess.run([ffmpeg_path, "-y", "-i", mp3_path, "-ac", "1", "-ar", "16000", out_path],
                                  capture_output=True, timeout=10, creationflags=creationflags)
             os.remove(mp3_path)
             if os.path.isfile(out_path):

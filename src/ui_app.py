@@ -4,7 +4,6 @@ Main application class with glassmorphism UI, file browser, sync controls.
 """
 
 import os
-import sys
 import json
 import threading
 import queue
@@ -15,14 +14,13 @@ import ctypes
 
 from utils import (
     __version__, __title__, CONFIG_PATH,
-    AUDIO_EXTENSIONS, ALL_AUDIO_EXTENSIONS, IPOD_COMPATIBLE,
+    AUDIO_EXTENSIONS,
     resource_path, find_ffmpeg, scan_source_folder, estimate_transcoded_size,
     get_disk_usage, format_size, extract_thumbnail_ppm,
     scan_ipod_existing, get_ipod_safe_key, detect_ipod_drives,
 )
 from database import build_itunes_db
 from sync_engine import sync_to_ipod
-from voiceover import build_voiceover
 from ui_theme import COLORS, ToolTip, setup_styles
 
 
@@ -952,7 +950,6 @@ class AntigravityApp:
 
     def _recalculate(self):
         """Recalculate space estimates whenever inputs change."""
-        music_path = self.music_var.get()
         drive_sel = self.drive_var.get()
         ipod_path = self._drive_paths.get(drive_sel, "")
 

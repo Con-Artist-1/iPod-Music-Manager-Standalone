@@ -11,8 +11,8 @@ import subprocess
 import threading
 import concurrent.futures
 
-from utils import (AUDIO_EXTENSIONS, IPOD_COMPATIBLE, format_size,
-                   scan_ipod_existing, get_ipod_safe_key)
+from utils import (IPOD_COMPATIBLE, format_size,
+                   scan_ipod_existing)
 from database import build_itunes_db
 from voiceover import build_voiceover
 

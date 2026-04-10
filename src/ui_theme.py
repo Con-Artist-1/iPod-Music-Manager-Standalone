@@ -4,7 +4,6 @@ Glassmorphism neon-purple color palette, ttk styles, and ToolTip widget.
 """
 
 import tkinter as tk
-from tkinter import ttk
 
 
 # ── Color Palette (Glassmorphism Neon Purple) ────────────────────────────────
