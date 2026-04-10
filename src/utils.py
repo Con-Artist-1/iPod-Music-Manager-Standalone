@@ -11,7 +11,7 @@ import subprocess
 import ctypes
 import string
 
-__version__ = "1.0 (4G)"
+__version__ = "1.0.1 (4G)"
 __title__ = "iPod Music Manager"
 
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".ipod_manager_config.json")
