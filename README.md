@@ -1,10 +1,10 @@
-# <img src="logo_preview.png" alt="Logo" width="40" valign="middle"> iPod Music Manager
+# <img src="logo_preview.png" alt="Logo" width="40" valign="middle"> iPod Music Manager (SPECIFICALLY iPod Shuffle 4th Gen — For Now)
 
 > **Note:** I am a programming newbie and this complete tool was built entirely as a passion project with the help of AI! 🤖
 
 
 
-**A standalone iPod Shuffle 4th Generation sync manager for Windows — no iTunes required.**
+**A standalone iPod Shuffle 4th Generation sync manager for Windows — no iTunes required. (I do not have other iPod models to test against!)**
 
 iPod Music Manager is a zero-dependency, self-contained tool that lets you manage music on your iPod Shuffle 4G directly. It builds the proprietary `iTunesSD` database from scratch, handles audio transcoding, generates VoiceOver speech files, and provides a modern dark-themed GUI — all without iTunes, iCloud, or any Apple software.
 
