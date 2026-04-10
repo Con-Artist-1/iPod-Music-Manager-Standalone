@@ -21,7 +21,7 @@ The repository is organized professionally to keep your workspace clean:
    - The engine automatically checks your iPod for files already in its domain.
    - It invokes a parallel threaded routine to copy new files or convert FLAC/incompatibles using the bundled FFmpeg.
    - It then stitches `database.py` together to inject the cryptic data payloads directly into your iPod's `iTunesSD` data partition.
-   - Finally, your playlist names textually compile via the `voiceover.py` gTTS bindings so the hardware voice correctly plays audio tags.
+   - Finally, your playlist names textually compile via the `voiceover.py` gTTS bindings. The app uses an advanced multi-language detection engine to instantly stitch Chinese, Japanese, Korean, and English speaker paths together cleanly so the hardware voice always reads mixed audio tags smoothly in their native accents!
 
 ## 🚀 How to Manage GitHub Releases
 
