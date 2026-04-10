@@ -43,23 +43,82 @@ def generate_voiceover_wav(out_path, text, ffmpeg_path=None):
     success = False
     try:
         from gtts import gTTS  # type: ignore
-        lang = 'en'
-        for c in text:
-            if '\u3040' <= c <= '\u30ff': lang = 'ja'; break
-            if '\uac00' <= c <= '\ud7a3': lang = 'ko'; break
-            if '\u4e00' <= c <= '\u9fff': lang = 'zh-CN'; break
-            
-        mp3_path = out_path + ".mp3"
-        tts = gTTS(text=text, lang=lang)
-        tts.save(mp3_path)
         
-        if ffmpeg_path and os.path.isfile(mp3_path):
-            creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-            subprocess.run([ffmpeg_path, "-y", "-i", mp3_path, "-ac", "1", "-ar", "16000", out_path],
-                                 capture_output=True, timeout=10, creationflags=creationflags)
-            os.remove(mp3_path)
-            if os.path.isfile(out_path):
-                success = True
+        # Analyze overall context for Kanji resolution
+        has_kana = any('\u3040' <= c <= '\u30ff' for c in text)
+        
+        chunks = []
+        current_lang = 'en'
+        current_text = ""
+        
+        for c in text:
+            l = 'en'
+            if '\u3040' <= c <= '\u30ff': 
+                l = 'ja'
+            elif '\uac00' <= c <= '\ud7a3': 
+                l = 'ko'
+            elif '\u4e00' <= c <= '\u9fff': 
+                l = 'ja' if has_kana else 'zh-CN'
+            elif not c.isalpha(): 
+                l = current_lang
+                
+            if l != current_lang and current_text.strip():
+                chunks.append((current_text, current_lang))
+                current_text = ""
+                current_lang = l
+            
+            current_text += c
+            
+        if current_text.strip():
+            chunks.append((current_text, current_lang))
+        elif current_text: # just whitespace/symbols fallback
+            chunks.append((current_text, 'en'))
+
+        if ffmpeg_path and chunks:
+            mp3_paths = []
+            for i, (chunk_text, chunk_lang) in enumerate(chunks):
+                if not chunk_text.strip(): continue
+                chunk_mp3 = out_path + f"_{i}.mp3"
+                tts = gTTS(text=chunk_text, lang=chunk_lang)
+                tts.save(chunk_mp3)
+                mp3_paths.append(chunk_mp3)
+            
+            if mp3_paths:
+                list_file = out_path + "_list.txt"
+                with open(list_file, "w", encoding="utf-8") as f:
+                    for p in mp3_paths:
+                        safe_p = p.replace('\\', '/')
+                        f.write(f"file '{safe_p}'\n")
+                        
+                creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                subprocess.run([ffmpeg_path, "-y", "-f", "concat", "-safe", "0", "-i", list_file, "-ac", "1", "-ar", "16000", out_path],
+                                     capture_output=True, timeout=15, creationflags=creationflags)
+                
+                os.remove(list_file)
+                for p in mp3_paths:
+                    os.remove(p)
+                    
+                if os.path.isfile(out_path):
+                    success = True
+        else:
+            # Fallback behavior if ffmpeg fails: grab dominant language from text
+            lang = 'en'
+            for c in text:
+                if '\u3040' <= c <= '\u30ff': lang = 'ja'; break
+                if '\uac00' <= c <= '\ud7a3': lang = 'ko'; break
+                if '\u4e00' <= c <= '\u9fff': lang = 'ja' if has_kana else 'zh-CN'; break
+            
+            mp3_path = out_path + ".mp3"
+            tts = gTTS(text=text, lang=lang)
+            tts.save(mp3_path)
+            
+            if ffmpeg_path and os.path.isfile(mp3_path):
+                creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                subprocess.run([ffmpeg_path, "-y", "-i", mp3_path, "-ac", "1", "-ar", "16000", out_path],
+                                     capture_output=True, timeout=10, creationflags=creationflags)
+                os.remove(mp3_path)
+                if os.path.isfile(out_path):
+                    success = True
     except Exception:
         pass
 

@@ -1,10 +1,7 @@
-<p align="center">
-  <img src="logo_preview.png" alt="iPod Music Manager Logo" width="150"/>
-</p>
-
-# iPod Music Manager
+# <img src="logo_preview.png" alt="Logo" width="40" valign="middle"> iPod Music Manager
 
 > **Note:** I am a programming newbie and this complete tool was built entirely as a passion project with the help of AI! 🤖
+
 
 
 **A standalone iPod Shuffle 4th Generation sync manager for Windows — no iTunes required.**
