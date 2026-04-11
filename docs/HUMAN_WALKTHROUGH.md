@@ -19,9 +19,9 @@ The repository is organized professionally to keep your workspace clean:
 1. **State Tracking:** Every time you check, uncheck, or collapse a playlist within the UI list, that event dynamically writes out a hidden list (`collapsed_folders`) bound inside a locally persisted `.json` config file found at `~/.ipod_manager_config.json`. The next time you launch the `exe`, the system inherently remembers how your view was styled previously.
 2. **The Sync Pipeline (`sync_engine.py`)**: 
    - The engine automatically checks your iPod for files already in its domain.
-   - It invokes a parallel threaded routine to copy new files or convert FLAC/incompatibles using the bundled FFmpeg.
-   - It then stitches `database.py` together to inject the cryptic data payloads directly into your iPod's `iTunesSD` data partition.
-   - Finally, your playlist names textually compile via the `voiceover.py` gTTS bindings. The app uses an advanced multi-language detection engine to instantly stitch Chinese, Japanese, Korean, and English speaker paths together cleanly so the hardware voice always reads mixed audio tags smoothly in their native accents!
+   - It invokes a massive background multi-threaded architecture separated into two queues: one array converts your songs locally on the SSD, and then immediately pipes the audio out to a secondary USB transfer queue to ensure constant, zero-downtime streaming.
+   - It then stitches `database.py` together to inject the cryptic data payloads directly into your iPod's `iTunesSD` data partition natively.
+   - Finally, your playlist names textually compile via the `voiceover.py` gTTS bindings concurrently across all available CPU cores. The app uses an advanced multi-language detection engine to instantly stitch Chinese, Japanese, Korean, and English speaker paths together cleanly so the hardware voice always reads mixed audio tags smoothly!
 
 ## 🚀 How to Manage GitHub Releases
 

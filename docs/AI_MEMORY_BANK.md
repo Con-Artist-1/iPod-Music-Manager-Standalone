@@ -10,14 +10,15 @@ The project is a standalone Python application that synchronizes music to an iPo
 
 - **`main.py`**: The application entry point. Simply initializes `AntigravityApp` from `ui_app.py` and runs it.
 - **`database.py`**: Parses and constructs the Little-Endian binary structs (`iTunesSD`, `Track`, `Playlist`) used by the iPod database.
-- **`sync_engine.py`**: The core orchestration pipeline. Handles multithreaded scanning of new/existing files, routes audio conversions via `ffmpeg`, copies valid files to `iPod_Control/Music/`, and triggers database regeneration.
-- **`voiceover.py`**: Connects to `gTTS` to lazily generate localized text-to-speech WAV tracks for song and playlist names. **Crucially, it utilizes a custom multi-language parsing engine** that dynamically segments mixed-language titles (e.g. English + Japanese), fetches multiple `gTTS` voice files simultaneously, and stitches them seamlessly via `ffmpeg`'s `filter_complex` audio graph. To prevent zero-byte `gTTS` corruption, it explicitly filters out isolated symbolic/punctuation text blocks using `isalnum()` before TTS generation. Falls back to Windows SAPI (PowerShell) if offline.
+- **`sync_engine.py`**: The core orchestration pipeline. Handles asynchronous queuing via a Producer-Consumer pattern where `ThreadPoolExecutor` dynamically pipes generated MP3s out of `tempfile` locations down to standard threaded USB writers concurrently.
+- **`voiceover.py`**: Connects to `gTTS` to lazily generate localized text-to-speech WAV tracks for song and playlist names. **Crucially, it utilizes a custom multi-language parsing engine and a parallel Multicore ThreadPoolExecutor** that dynamically segments mixed-language titles (e.g. English + Japanese), fetches multiple `gTTS` voice files simultaneously, and stitches them seamlessly via `ffmpeg`. It resolves TTS endpoints across multiple cores simultaneously, bypassing sequential speed limiters.
 - **`ui_app.py`**: The Tkinter-based monolithic UI. Controls view state (List vs. Grid), configuration loading/saving, asynchronous thumbnail generation, and debounced window resizing to prevent lag.
 - **`ui_theme.py`**: Contains the `COLORS` definitions (neon-purple glassmorphism theme) and initializes custom `ttk` styling tokens. Also houses the `ToolTip` class.
 - **`utils.py`**: Statics, external executable fetchers (like finding `ffmpeg.exe`), safe file name generators, and size conversion math.
 
 ### File Locations & External Deps
 - **`ffmpeg.exe`**: We rely on this executable for transcoding (FLAC/MP3/M4A) and extracting album thumbnails (PPM format) directly into memory. It is heavily ignored in source control (due to ~100MB size) but fetched automatically in deployment actions via `scripts/download_ffmpeg.py`.
+- **`Mutagen`**: In-house requirement module injected strictly to harvest byte boundaries natively without extrapolating heuristics, allowing Space Dashboards to effectively estimate exact capacities dynamically.
 - **`.ipod_manager_config.json`**: Generated automatically in the user's home directory (`~/.ipod_manager_config.json`). It persists the last used music path, bitrate selections, and an array of `collapsed_folders` for the UI state.
 
 ## CI/CD Pipeline (GitHub Actions)
