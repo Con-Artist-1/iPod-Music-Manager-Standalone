@@ -2,3 +2,4 @@ gTTS>=2.3.2
 Pillow>=10.2.0
 pyinstaller>=6.4.0
 pywin32
+mutagen>=1.47.0

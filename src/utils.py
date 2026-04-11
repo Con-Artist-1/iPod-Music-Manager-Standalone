@@ -11,6 +11,11 @@ import subprocess
 import ctypes
 import string
 
+try:
+    import mutagen
+except ImportError:
+    mutagen = None
+
 __version__ = "1.1.1 (4G)"
 __title__ = "iPod Music Manager"
 
@@ -84,12 +89,23 @@ def scan_source_folder(source_path):
                             size = entry.stat().st_size
                         except OSError:
                             size = 0
+                        
+                        duration_s = 0
+                        if mutagen is not None:
+                            try:
+                                audio_file = mutagen.File(entry.path)
+                                if audio_file and hasattr(audio_file, 'info') and audio_file.info:
+                                    duration_s = getattr(audio_file.info, 'length', 0)
+                            except Exception:
+                                pass
+                                
                         files.append({
                             "path": entry.path,
                             "rel_path": rel,
                             "folder": folder,
                             "size": size,
                             "ext": ext,
+                            "duration_s": duration_s,
                         })
         except OSError:
             pass
@@ -107,25 +123,27 @@ def estimate_transcoded_size(file_info, target_bitrate_kbps, target_format):
     """
     ext = file_info["ext"]
     size = file_info["size"]
+    exact_duration = file_info.get("duration_s", 0)
 
-    # Estimate duration from file size
-    if ext in (".wav", ".aiff", ".aif"):
-        # WAV: ~1411 kbps (CD quality 16-bit 44.1kHz stereo)
-        duration_s = size / (1411 * 1000 / 8) if size > 0 else 0
-    elif ext in (".flac",):
-        # FLAC: roughly 50-70% of WAV, assume ~800 kbps average
-        duration_s = size / (800 * 1000 / 8) if size > 0 else 0
+    if exact_duration > 0:
+        duration_s = exact_duration
     else:
-        # Compressed formats (mp3, m4a, ogg, etc.): assume ~192 kbps average
-        duration_s = size / (192 * 1000 / 8) if size > 0 else 0
+        # Fallback Estimate duration from file size
+        if ext in (".wav", ".aiff", ".aif"):
+            # WAV: ~1411 kbps (CD quality 16-bit 44.1kHz stereo)
+            duration_s = size / (1411 * 1000 / 8) if size > 0 else 0
+        elif ext in (".flac",):
+            # FLAC: roughly 50-70% of WAV, assume ~800 kbps average
+            duration_s = size / (800 * 1000 / 8) if size > 0 else 0
+        else:
+            # Compressed formats (mp3, m4a, ogg, etc.): assume ~144 kbps average
+            # Conservative estimate — produces longer durations and larger output predictions
+            duration_s = size / (144 * 1000 / 8) if size > 0 else 0
 
     # Estimated output size at target bitrate
+    # For VBR, estimate at the full CBR rate — VBR may save space but we
+    # must never promise more free space than reality delivers.
     estimated = int((target_bitrate_kbps * 1000 / 8) * duration_s)
-    
-    if "VBR" in target_format:
-        # VBR dynamically scales based on complexity, typically saving ~30-40% 
-        # storage over strict CBR while preserving identical perceptual quality.
-        estimated = int(estimated * 0.65)
 
     return max(estimated, 1024)  # minimum 1KB
 

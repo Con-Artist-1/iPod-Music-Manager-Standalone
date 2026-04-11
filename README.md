@@ -20,12 +20,13 @@ iPod Music Manager is a zero-dependency, self-contained tool that lets you manag
 - **Incremental Sync & Cache Sweeper** — Only copies new/missing files. Any unselected tracks or abandoned folders are automatically swept off the iPod physical disk completely, recovering wasted storage natively on every sync!
 - **State Memory Tracking** — Remembers exactly which playlists you left collapsed/expanded or checked the previous session natively.
 - **Audio Transcoding** — Built-in ffmpeg integration converts FLAC, OGG, OPUS, WMA, AIFF and more into MP3 or AAC seamlessly.
-- **Parallel Processing** — Multi-threaded copy/transcode engine for significantly faster syncs.
+- **Concurrent Parallel Pipelines** — Ultra-modern queue design separates physical transcode loads away from the main thread logic, piping audio smoothly into the USB drive while native TTS multicore generators load VoiceOvers offline instantly.
 
 ## Requirements
 
 - **Windows 10/11** (uses Windows SAPI for VoiceOver, dark title bar API)
 - **Python 3.10+** (if running from source)
+- **mutagen**, **gTTS**, and **Pillow** (pure dependency integrations)
 - **ffmpeg** (optional, for transcoding — auto-downloaded via script)
 
 ## Quick Start (Executable)

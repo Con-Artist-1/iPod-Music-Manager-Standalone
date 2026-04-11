@@ -343,6 +343,24 @@ class AntigravityApp:
         self.progress_label = ttk.Label(left, text="", style="Subtitle.TLabel")
         self.progress_label.pack(anchor="w", pady=(0, 6))
 
+        # Copy Progress
+        self.copy_progress_var = tk.DoubleVar(value=0)
+        self.copy_progress_bar = ttk.Progressbar(left, variable=self.copy_progress_var,
+                                             maximum=100,
+                                             style="green.Horizontal.TProgressbar")
+        self.copy_progress_bar.pack(fill=tk.X, pady=(0, 3))
+        self.copy_progress_label = ttk.Label(left, text="", style="Subtitle.TLabel")
+        self.copy_progress_label.pack(anchor="w", pady=(0, 6))
+
+        # VoiceOver Progress
+        self.vo_progress_var = tk.DoubleVar(value=0)
+        self.vo_progress_bar = ttk.Progressbar(left, variable=self.vo_progress_var,
+                                             maximum=100,
+                                             style="green.Horizontal.TProgressbar")
+        self.vo_progress_bar.pack(fill=tk.X, pady=(0, 3))
+        self.vo_progress_label = ttk.Label(left, text="", style="Subtitle.TLabel")
+        self.vo_progress_label.pack(anchor="w", pady=(0, 6))
+
         btn_row = tk.Frame(left, bg=COLORS["BG_DARK"])
         btn_row.pack(fill=tk.X, pady=(0, 4))
         self.sync_btn = ttk.Button(btn_row, text="\u25B6  Sync to iPod",
@@ -1009,7 +1027,8 @@ class AntigravityApp:
 
         if self.voiceover_var.get() and self._new_file_count > 0:
             vo_count = self._new_file_count + num_playlists
-            self._estimated_size += vo_count * 15360
+            # 16kHz mono wav = 32 KB/sec. Expecting ~5 seconds roughly per average spoken text string.
+            self._estimated_size += vo_count * 163840
 
         # iPod free space
         if ipod_path and os.path.isdir(ipod_path):
@@ -1080,8 +1099,15 @@ class AntigravityApp:
     def _set_progress(self, current, total, phase=""):
         if total > 0:
             pct = (current / total) * 100
-            self.progress_var.set(pct)
-            self.progress_label.configure(text=f"{phase}: {current}/{total}")
+            if "Copy" in phase:
+                self.copy_progress_var.set(pct)
+                self.copy_progress_label.configure(text=f"{phase}: {current}/{total}")
+            elif "VoiceOver" in phase:
+                self.vo_progress_var.set(pct)
+                self.vo_progress_label.configure(text=f"{phase}: {current}/{total}")
+            else:
+                self.progress_var.set(pct)
+                self.progress_label.configure(text=f"{phase}: {current}/{total}")
         self.root.update_idletasks()
 
     # ── Sync Action ──────────────────────────────────────────────────────
@@ -1116,6 +1142,11 @@ class AntigravityApp:
 
         self._clear_log()
         self.progress_var.set(0)
+        self.progress_label.configure(text="Pending")
+        self.copy_progress_var.set(0)
+        self.copy_progress_label.configure(text="Pending")
+        self.vo_progress_var.set(0)
+        self.vo_progress_label.configure(text="Pending")
         self.sync_btn.configure(state=tk.DISABLED)
         self.rebuild_btn.configure(state=tk.DISABLED)
         self.wipe_btn.configure(state=tk.DISABLED)
@@ -1161,11 +1192,15 @@ class AntigravityApp:
                         text="\u2713  READY TO EJECT \u2014 Safe to disconnect your iPod.",
                         style="Status.TLabel")
                     self.progress_label.configure(text="Complete!")
+                    self.copy_progress_label.configure(text="Complete!")
+                    self.vo_progress_label.configure(text="Complete!")
                     self._recalculate()
                 else:
                     self.status_label.configure(text="\u2717  Sync failed. Check log for details.",
                                                 style="Subtitle.TLabel")
                     self.progress_label.configure(text="Failed")
+                    self.copy_progress_label.configure(text="Failed")
+                    self.vo_progress_label.configure(text="Failed")
 
             self.root.after(0, finish)
 

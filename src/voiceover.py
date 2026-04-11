@@ -7,6 +7,8 @@ import os
 import sys
 import subprocess
 import wave
+import threading
+import concurrent.futures
 
 from utils import format_size
 
@@ -142,7 +144,7 @@ def generate_silent_wav(out_path):
         pass
 
 
-def build_voiceover(ipod_path, track_dbids, playlist_dbids, ffmpeg_path=None, log_cb=None):
+def build_voiceover(ipod_path, track_dbids, playlist_dbids, ffmpeg_path=None, log_cb=None, progress_cb=None):
     """
     Generate VoiceOver .wav files for tracks and playlists.
     track_dbids: dict of {ipod_rel_path: (dbid_bytes, display_name)}
@@ -163,32 +165,51 @@ def build_voiceover(ipod_path, track_dbids, playlist_dbids, ffmpeg_path=None, lo
     generated = 0
     cached = 0
     failed = 0
+    processed = 0
 
-    # Generate playlist voiceovers
+    lock = threading.Lock()
+    tasks = []
+
     for folder_name, dbid in playlist_dbids.items():
-        hex_name = dbid_to_hex_filename(dbid)
-        wav_path = os.path.join(playlists_dir, hex_name + ".wav")
-        res = generate_voiceover_wav(wav_path, folder_name, ffmpeg_path)
-        if res == "cached": cached += 1
-        elif res == "generated": generated += 1
-        else:
-            generate_silent_wav(wav_path)
-            failed += 1
-        if os.path.isfile(wav_path):
-            total_size += os.path.getsize(wav_path)
-
-    # Generate track voiceovers
+        tasks.append(("playlist", dbid, folder_name))
     for ipod_rel, (dbid, display_name) in track_dbids.items():
+        tasks.append(("track", dbid, display_name))
+
+    total_tasks = len(tasks)
+
+    def worker(task):
+        nonlocal total_size, generated, cached, failed, processed
+        task_type, dbid, text = task
         hex_name = dbid_to_hex_filename(dbid)
-        wav_path = os.path.join(tracks_dir, hex_name + ".wav")
-        res = generate_voiceover_wav(wav_path, display_name, ffmpeg_path)
-        if res == "cached": cached += 1
-        elif res == "generated": generated += 1
+        
+        if task_type == "playlist":
+            wav_path = os.path.join(playlists_dir, hex_name + ".wav")
         else:
-            generate_silent_wav(wav_path)
-            failed += 1
-        if os.path.isfile(wav_path):
-            total_size += os.path.getsize(wav_path)
+            wav_path = os.path.join(tracks_dir, hex_name + ".wav")
+            
+        res = generate_voiceover_wav(wav_path, text, ffmpeg_path)
+        
+        with lock:
+            if res == "cached": cached += 1
+            elif res == "generated": generated += 1
+            else:
+                generate_silent_wav(wav_path)
+                failed += 1
+            
+            if os.path.isfile(wav_path):
+                total_size += os.path.getsize(wav_path)
+                
+            processed += 1
+            if progress_cb:
+                if total_tasks < 50 or processed % max(1, total_tasks // 25) == 0 or processed == total_tasks:
+                    progress_cb(processed, total_tasks, "VoiceOver")
+
+    workers = max(2, min(os.cpu_count() or 4, 8))
+    log(f"  Multi-core TTS Engine ({workers} workers) processing {total_tasks} VoiceOvers...")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+        for _ in executor.map(worker, tasks):
+            pass
 
     log(f"  VoiceOver: {generated} generated, {cached} cached, {failed} fallback silent ({format_size(total_size)} total)")
 
